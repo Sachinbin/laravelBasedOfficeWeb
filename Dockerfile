@@ -1,6 +1,6 @@
 FROM php:8.2-apache
 
-# Enable Apache modules
+# Enable Apache rewrite
 RUN a2enmod rewrite
 
 # Install system dependencies
@@ -11,10 +11,10 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy everything
+# Copy all project files
 COPY . /var/www/html
 
-# ---- FIX: Set correct Apache DocumentRoot ----
+# ---- FIX: Set correct Apache DocumentRoot to /public ----
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
@@ -29,10 +29,14 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # Install PHP dependencies
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
-# Laravel permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# ---- FIX: STORAGE + CACHE + VIEW PATHS ----
+RUN mkdir -p storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    bootstrap/cache && \
+    chmod -R 777 storage bootstrap/cache
 
-# Expose port
+# Expose port 80
 EXPOSE 80
 
 CMD ["apache2-foreground"]
